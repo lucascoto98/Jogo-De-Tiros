@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Mini Free Fire</title>
+<style>
+body {
+  margin: 0;
+  background: black;
+  color: white;
+  font-family: Arial;
+}
+canvas {
+  background: #222;
+  display: block;
+  margin: auto;
+}
+#menu {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.box {
+  border: 2px solid white;
+  padding: 25px 40px;
+}
+button {
+  padding: 12px 30px;
+  font-size: 18px;
+  cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div id="menu">
+  <div class="box" id="menuBox">
+    <h1>Mini Free Fire</h1>
+    <p><b>Comandos</b></p>
+    <p>W A S D → Mover</p>
+    <p>Mouse → Atirar</p>
+    <br>
+    <button onclick="startGame()">Começar</button>
+  </div>
+</div>
+
+<canvas id="c" width="800" height="500"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+const menu = document.getElementById("menu");
+const menuBox = document.getElementById("menuBox");
+
+let player, bullets, enemies, keys, score, running;
+
+function startGame() {
+  player = { x: 400, y: 250 };
+  bullets = [];
+  enemies = [];
+  keys = {};
+  score = 0;
+  running = true;
+  menu.style.display = "none";
+}
+
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+canvas.addEventListener("click", e => {
+  if (!running) return;
+  const r = canvas.getBoundingClientRect();
+  const mx = e.clientX - r.left;
+  const my = e.clientY - r.top;
+  const a = Math.atan2(my - player.y, mx - player.x);
+  bullets.push({
+    x: player.x,
+    y: player.y,
+    dx: Math.cos(a) * 7,
+    dy: Math.sin(a) * 7
+  });
+});
+
+setInterval(() => {
+  if (running) {
+    enemies.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height
+    });
+  }
+}, 1200);
+
+function drawSoldier(x, y, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x - 12, y - 18, 24, 36); // corpo
+  ctx.fillRect(x - 8, y - 32, 16, 16); // cabeça
+}
+
+function endGame() {
+  running = false;
+  menuBox.innerHTML = `
+    <h1>Game Over</h1>
+    <p>Score: ${score}</p><br>
+    <button onclick="startGame()">Jogar de novo</button>
+  `;
+  menu.style.display = "flex";
+}
+
+function loop() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if (running) {
+    if (keys["w"]) player.y -= 4;
+    if (keys["s"]) player.y += 4;
+    if (keys["a"]) player.x -= 4;
+    if (keys["d"]) player.x += 4;
+
+    player.x = Math.max(15, Math.min(canvas.width - 15, player.x));
+    player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
+
+    drawSoldier(player.x, player.y, "lime");
+
+    bullets = bullets.filter(b =>
+      b.x > 0 && b.x < canvas.width &&
+      b.y > 0 && b.y < canvas.height
+    );
+
+    ctx.fillStyle = "yellow";
+    bullets.forEach(b => {
+      b.x += b.dx;
+      b.y += b.dy;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 4, 0, Math.PI*2);
+      ctx.fill();
+    });
+
+    enemies.forEach((e, ei) => {
+      const a = Math.atan2(player.y - e.y, player.x - e.x);
+      e.x += Math.cos(a) * 1.4;
+      e.y += Math.sin(a) * 1.4;
+
+      drawSoldier(e.x, e.y, "red");
+
+      if (Math.abs(player.x - e.x) < 18 && Math.abs(player.y - e.y) < 25) {
+        endGame();
+      }
+
+      bullets.forEach((b, bi) => {
+        if (Math.abs(b.x - e.x) < 15 && Math.abs(b.y - e.y) < 20) {
+          enemies.splice(ei,1);
+          bullets.splice(bi,1);
+          score++;
+        }
+      });
+    });
+
+    ctx.fillStyle = "white";
+    ctx.fillText("Score: " + score, 10, 20);
+  }
+
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
